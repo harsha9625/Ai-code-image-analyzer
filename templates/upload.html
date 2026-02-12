@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Python Code Image Analyzer</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 40px;
+      background: #f4f4f4;
+    }
+
+    h2 {
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+    }
+
+    pre {
+      background: #1e1e1e;
+      color: #00ff88;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+
+    .error-box {
+      background: #ffe6e6;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 5px solid red;
+    }
+
+    button {
+      padding: 8px 15px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    img {
+      max-width: 300px;
+      margin-top: 10px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>Python Code Image Analyzer</h2>
+
+<form id="uploadForm" enctype="multipart/form-data">
+  <input type="file" name="image" accept="image/*" required id="fileInput"/>
+  <br><br>
+  <button type="submit">Analyze</button>
+</form>
+
+<h3>Image Preview</h3>
+<img id="preview"/>
+
+<hr>
+
+<div id="results"></div>
+
+</div>
+
+<script>
+
+const fileInput = document.getElementById("fileInput");
+
+fileInput.addEventListener("change", function () {
+  const reader = new FileReader();
+  reader.onload = () => document.getElementById("preview").src = reader.result;
+  reader.readAsDataURL(this.files[0]);
+});
+
+document.getElementById("uploadForm").addEventListener("submit", async function (e) {
+
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  const response = await fetch("/analyze", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await response.json();
+  const resultsDiv = document.getElementById("results");
+  resultsDiv.innerHTML = "";
+
+  if (data.error) {
+    resultsDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+    return;
+  }
+
+  const result = data.result;
+
+  // Extracted code
+  resultsDiv.innerHTML += `
+    <h3>Extracted Code</h3>
+    <pre>${result.extracted_code || "None"}</pre>
+  `;
+
+  // Errors
+  resultsDiv.innerHTML += `<h3>Detected Errors</h3>`;
+
+  if (result.errors && result.errors.length > 0) {
+    result.errors.forEach(err => {
+      resultsDiv.innerHTML += `
+        <div class="error-box">
+          <b>Type:</b> ${err.type}<br>
+          <b>Line:</b> ${err.line}<br>
+          <b>Code:</b> ${err.code}<br>
+          <b>Explanation:</b> ${err.explanation}
+        </div>
+      `;
+    });
+  } else {
+    resultsDiv.innerHTML += `<p>No errors detected.</p>`;
+  }
+
+  // Corrected code
+  resultsDiv.innerHTML += `
+    <h3>Corrected Code</h3>
+    <pre>${result.corrected_code || "None"}</pre>
+  `;
+
+});
+
+</script>
+
+</body>
+</html>
